@@ -4,19 +4,42 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
+use std::sync::RwLock;
 
 use crate::error::Result;
 use crate::vocab::Vocab;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct BPE {
     pub vocab: Vocab,
     pub merges: HashMap<(String, String), u32>,
     #[serde(skip)]
-    pub cache: HashMap<String, Vec<String>>, // Simple cache
+    #[serde(default = "default_cache")]
+    pub cache: RwLock<HashMap<String, Vec<String>>>, // Thread-safe cache
     #[serde(skip)]
     #[serde(default = "default_regex")]
     pub regex: Regex,
+}
+
+fn default_cache() -> RwLock<HashMap<String, Vec<String>>> {
+    RwLock::new(HashMap::new())
+}
+
+impl Clone for BPE {
+    fn clone(&self) -> Self {
+        let cache_snapshot = self
+            .cache
+            .read()
+            .map(|cache| cache.clone())
+            .unwrap_or_default();
+
+        Self {
+            vocab: self.vocab.clone(),
+            merges: self.merges.clone(),
+            cache: RwLock::new(cache_snapshot),
+            regex: self.regex.clone(),
+        }
+    }
 }
 
 fn default_regex() -> Regex {
@@ -38,7 +61,7 @@ impl BPE {
         Self {
             vocab,
             merges,
-            cache: HashMap::new(),
+            cache: default_cache(),
             regex: default_regex(),
         }
     }
@@ -80,8 +103,11 @@ impl BPE {
     }
 
     fn bpe(&self, token: &str) -> Vec<String> {
-        // If word is in cache, return it
-        // (This implementation requires RefCell for interior mutability to cache, skipping for simplicity in this immutable method)
+        if let Ok(cache) = self.cache.read() {
+            if let Some(cached) = cache.get(token) {
+                return cached.clone();
+            }
+        }
 
         let mut word: Vec<String> = token.chars().map(|c| c.to_string()).collect();
 
@@ -127,6 +153,10 @@ impl BPE {
             }
         }
 
+        if let Ok(mut cache) = self.cache.write() {
+            cache.insert(token.to_string(), word.clone());
+        }
+
         word
     }
 
@@ -155,6 +185,14 @@ impl BPE {
         ids
     }
 
+    pub fn encode_with_max_tokens(&self, text: &str, max_tokens: usize) -> Vec<u32> {
+        let mut ids = self.encode(text);
+        if ids.len() > max_tokens {
+            ids.truncate(max_tokens);
+        }
+        ids
+    }
+
     pub fn decode(&self, ids: &[u32]) -> String {
         let mut text = String::new();
         for id in ids {
@@ -176,6 +214,7 @@ impl BPE {
         let file = File::open(path)?;
         let reader = std::io::BufReader::new(file);
         let mut bpe: BPE = serde_json::from_reader(reader)?;
+        bpe.cache = default_cache();
         bpe.regex = default_regex();
         Ok(bpe)
     }
@@ -190,6 +229,30 @@ mod tests {
     use super::*;
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn encode_with_max_tokens_respects_limit() {
+        let mut vocab = Vocab::new();
+        vocab.insert("a".to_string(), 0);
+        vocab.insert("b".to_string(), 1);
+
+        let bpe = BPE::new(vocab, HashMap::new());
+        let ids = bpe.encode_with_max_tokens("ababa", 3);
+
+        assert_eq!(ids.len(), 3);
+    }
+
+    #[test]
+    fn encode_populates_internal_cache() {
+        let mut vocab = Vocab::new();
+        vocab.insert("a".to_string(), 0);
+
+        let bpe = BPE::new(vocab, HashMap::new());
+        let _ = bpe.encode("a a");
+
+        let cache = bpe.cache.read().expect("cache read lock");
+        assert!(cache.contains_key("a"));
+    }
 
     #[test]
     fn from_files_assigns_contiguous_merge_ranks_ignoring_comments_and_blanks() {
