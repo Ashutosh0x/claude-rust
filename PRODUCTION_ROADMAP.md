@@ -2,14 +2,14 @@
 
 This document tracks the technical debt, feature requests, and architectural milestones for the Claude-Rust project.
 
-## 🟢 Status: Development (Core Ready)
+## Status: Development (Core Ready)
 - **Crates**: All crates (`claude-core`, `inference`, `tokenizer`, `trainer`, `retrieval`, `claude-tui`) are compiling.
 - **Inference**: SSE Streaming server is functional.
 - **Tokenizer**: Custom BPE trainer and decoder are functional.
 
 ---
 
-## 🛠 Active Technical Backlog
+## Active Technical Backlog
 
 ### 1. High-Performance Core (`claude-core`)
 - [ ] **Static KV Cache Allocation**:
@@ -50,7 +50,7 @@ This document tracks the technical debt, feature requests, and architectural mil
 
 ---
 
-## 🚀 Execution Plan
+## Execution Plan
 
 ### Immediate Next: KV Cache Optimization
 The `Tensor::cat` in `CausalSelfAttention::forward` will cause severe slowdowns as the context reaches 100+ tokens. 
