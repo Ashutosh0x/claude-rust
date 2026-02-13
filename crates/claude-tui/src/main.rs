@@ -5,19 +5,16 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use futures::StreamExt;
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
+use std::sync::Arc;
 use std::{error::Error, io, time::Duration};
 use tokio::sync::mpsc;
-use std::sync::Arc;
 
 // Local crate imports
 use claude_core::{ClaudeTransformer, ModelConfig};
 use inference::{Generator, SamplingParams};
-use tokenizer::{BPE, Vocab};
 use tch::{nn, Device};
+use tokenizer::{Vocab, BPE};
 use tui_input::backend::crossterm::EventHandler;
 
 mod app;
@@ -37,16 +34,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // 0. Initialize Model & Tokenizer
     let device = Device::cuda_if_available();
     println!("Using device: {:?}", device);
-    
+
     let vocab_path = "data/vocab.json";
     let checkpoint_dir = std::path::Path::new("checkpoints");
-    
+
     // Load Tokenizer
     let tokenizer = if std::path::Path::new(vocab_path).exists() {
         println!("Loading tokenizer from {}", vocab_path);
         Arc::new(BPE::load(vocab_path)?)
     } else {
-        println!("Warning: Tokenizer vocab not found at {}. Using minimal fallback.", vocab_path);
+        println!(
+            "Warning: Tokenizer vocab not found at {}. Using minimal fallback.",
+            vocab_path
+        );
         let mut vocab = Vocab::new();
         vocab.insert(" ".to_string(), 32);
         for i in 65..123 {
@@ -61,13 +61,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let model = if checkpoint_dir.exists() && checkpoint_dir.join("config.json").exists() {
         Arc::new(inference::load_model(checkpoint_dir, device)?)
     } else {
-        println!("Warning: No trained model found in {:?}. Initializing random model.", checkpoint_dir);
+        println!(
+            "Warning: No trained model found in {:?}. Initializing random model.",
+            checkpoint_dir
+        );
         let config = ModelConfig {
             n_embd: 128,
             n_head: 4,
             n_layer: 4,
             vocab_size: tokenizer.vocab.len() as i64,
-            max_seq_len: 512,
+            max_seq_len: 2048,
             dropout: 0.1,
             use_bias: true,
             layer_norm_epsilon: 1e-5,
@@ -103,7 +106,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
 
     // Run loop
-    let res = run_app(&mut terminal, &mut app, &mut reader, tx, &mut rx, model, tokenizer, device).await;
+    let res = run_app(
+        &mut terminal,
+        &mut app,
+        &mut reader,
+        tx,
+        &mut rx,
+        model,
+        tokenizer,
+        device,
+    )
+    .await;
 
     // 4. Cleanup
     disable_raw_mode()?;
@@ -167,36 +180,40 @@ async fn run_app(
                                     });
                                     app.input.reset();
                                     app.is_loading = true;
-                                    
+
                                     let tx_action = tx.clone();
                                     let model = Arc::clone(&model);
                                     let tokenizer = Arc::clone(&tokenizer);
                                     let prompt = text.clone();
-                                    
+
                                     tokio::spawn(async move {
                                         let mut generator = Generator::new(Arc::clone(&model), device);
                                         let params = SamplingParams::default();
-                                        
+
                                         // 1. Tokenize prompt
                                         let input_ids: Vec<i64> = tokenizer.encode(&prompt).iter().map(|&id| id as i64).collect();
-                                        
+
                                         // 2. Setup internal stream channel
                                         let (token_tx, mut token_rx) = mpsc::channel(100);
-                                        
+
                                         // 3. Start generation in a blocking-safe way if necessary or just await
                                         // Since we are already in an async spawn, we can run generate_stream
                                         let tokenizer_clone = Arc::clone(&tokenizer);
                                         let tx_action_clone = tx_action.clone();
-                                        
+
                                         tokio::spawn(async move {
                                             let _ = generator.generate_stream(&input_ids, 50, &params, token_tx);
                                         });
 
                                         while let Some(token_id) = token_rx.recv().await {
-                                            let text = tokenizer_clone.decode(&[token_id as u32]);
+                                            let raw_text = tokenizer_clone.decode(&[token_id as u32]);
+                                            let text: String = raw_text
+                                                .chars()
+                                                .map(|c| if c.is_control() && c != '\n' && c != '\t' { '�' } else { c })
+                                                .collect();
                                             let _ = tx_action_clone.send(Action::TokenGenerated(text)).await;
                                         }
-                                        
+
                                         let _ = tx_action.send(Action::GenerationFinished).await;
                                     });
                                 }
