@@ -1,14 +1,11 @@
-use axum::{
-    routing::post,
-    Json, Router, extract::State,
-};
+use axum::{extract::State, routing::post, Json, Router};
+use claude_core::ClaudeTransformer;
+use inference::{load_model, Generator, SamplingParams};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tch::Device;
-use inference::{Generator, SamplingParams, load_model};
 use tokenizer::BPE;
-use claude_core::ClaudeTransformer;
 
 #[derive(Clone)]
 struct AppState {
@@ -21,6 +18,7 @@ struct AppState {
 struct GenRequest {
     prompt: String,
     max_new_tokens: Option<usize>,
+    max_input_tokens: Option<usize>,
     temperature: Option<f64>,
     top_p: Option<f64>,
 }
@@ -41,21 +39,32 @@ async fn generate_handler(
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let mut generator = Generator::new(Arc::clone(&state.model), state.device);
     let mut params = SamplingParams::default();
-    if let Some(t) = req.temperature { params.temperature = t; }
-    if let Some(p) = req.top_p { params.top_p = p; }
-    
+    if let Some(t) = req.temperature {
+        params.temperature = t;
+    }
+    if let Some(p) = req.top_p {
+        params.top_p = p;
+    }
+
     let max_tokens = req.max_new_tokens.unwrap_or(50);
-    
-    let input_ids: Vec<i64> = state.tokenizer
-        .encode(&req.prompt)
+    let max_input_tokens = req.max_input_tokens.unwrap_or(1024);
+
+    let input_ids: Vec<i64> = state
+        .tokenizer
+        .encode_with_max_tokens(&req.prompt, max_input_tokens)
         .iter()
         .map(|&id| id as i64)
         .collect();
-        
+
+    if input_ids.is_empty() {
+        let stream = stream::iter([Ok(Event::default().data(""))]);
+        return Sse::new(stream);
+    }
+
     let (tx, rx) = tokio::sync::mpsc::channel(max_tokens + 1);
-    
+
     let input_ids_clone = input_ids.clone();
-    
+
     tokio::task::spawn_blocking(move || {
         let _ = generator.generate_stream(&input_ids_clone, max_tokens, &params, tx);
     });
@@ -81,22 +90,25 @@ async fn generate_handler(
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
-    
+
     let device = Device::cuda_if_available();
     println!("Using device: {:?}", device);
-    
+
     let checkpoint_dir = std::path::Path::new("checkpoints");
     let vocab_path = "data/vocab.json";
-    
+
     // 1. Load Tokenizer
     let tokenizer = if std::path::Path::new(vocab_path).exists() {
         println!("Loading tokenizer from {}", vocab_path);
         Arc::new(BPE::load(vocab_path)?)
     } else {
         println!("Warning: Tokenizer not found. Server may produce garbage.");
-        Arc::new(BPE::new(tokenizer::Vocab::new(), std::collections::HashMap::new()))
+        Arc::new(BPE::new(
+            tokenizer::Vocab::new(),
+            std::collections::HashMap::new(),
+        ))
     };
-    
+
     // 2. Load Model
     let model = if checkpoint_dir.exists() && checkpoint_dir.join("config.json").exists() {
         Arc::new(load_model(checkpoint_dir, device)?)
@@ -128,10 +140,10 @@ async fn main() -> anyhow::Result<()> {
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
     println!("Inference server listening on {}", addr);
-    
+
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await?;
-        
+
     Ok(())
 }
