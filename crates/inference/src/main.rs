@@ -30,7 +30,7 @@ struct GenResponse {
 }
 
 use axum::response::sse::{Event, Sse};
-use futures::stream::{self, Stream};
+use futures::stream::{self, Stream, StreamExt};
 use std::convert::Infallible;
 
 async fn generate_handler(
@@ -58,11 +58,10 @@ async fn generate_handler(
 
     if input_ids.is_empty() {
         let stream = stream::iter([Ok(Event::default().data(""))]);
-        return Sse::new(stream);
+        return Sse::new(stream.boxed());
     }
 
     let (tx, rx) = tokio::sync::mpsc::channel(max_tokens + 1);
-
     let input_ids_clone = input_ids.clone();
 
     tokio::task::spawn_blocking(move || {
@@ -84,7 +83,7 @@ async fn generate_handler(
         }
     });
 
-    Sse::new(stream)
+    Sse::new(stream.boxed())
 }
 
 #[tokio::main]

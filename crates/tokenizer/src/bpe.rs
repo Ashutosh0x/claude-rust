@@ -12,6 +12,7 @@ use crate::vocab::Vocab;
 #[derive(Serialize, Deserialize)]
 pub struct BPE {
     pub vocab: Vocab,
+    #[serde(with = "merges_serde")]
     pub merges: HashMap<(String, String), u32>,
     #[serde(skip)]
     #[serde(default = "default_cache")]
@@ -19,6 +20,27 @@ pub struct BPE {
     #[serde(skip)]
     #[serde(default = "default_regex")]
     pub regex: Regex,
+}
+
+mod merges_serde {
+    use super::*;
+    use serde::{Serializer, Deserializer, Serialize, Deserialize};
+
+    pub fn serialize<S>(merges: &HashMap<(String, String), u32>, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let as_vec: Vec<(&(String, String), &u32)> = merges.iter().collect();
+        as_vec.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> std::result::Result<HashMap<(String, String), u32>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let as_vec: Vec<((String, String), u32)> = Vec::deserialize(deserializer)?;
+        Ok(as_vec.into_iter().collect())
+    }
 }
 
 fn default_cache() -> RwLock<HashMap<String, Vec<String>>> {

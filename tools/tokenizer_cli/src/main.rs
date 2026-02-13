@@ -97,8 +97,8 @@ fn main() -> Result<()> {
                     let vocab_path = output_dir.join("vocab.json");
                     let merges_path = output_dir.join("merges.txt");
 
-                    println!("Saving vocab to {:?}", vocab_path);
-                    bpe.vocab.save(&vocab_path).context("Failed to save vocab")?;
+                    println!("Saving full BPE state to {:?}", vocab_path);
+                    bpe.save(&vocab_path).context("Failed to save tokenizer")?;
 
                     println!("Saving merges to {:?}", merges_path);
                     save_merges(&bpe.merges, &merges_path).context("Failed to save merges")?;
