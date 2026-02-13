@@ -27,9 +27,9 @@ fn default_regex() -> Regex {
 impl std::fmt::Debug for BPE {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BPE")
-         .field("vocab_size", &self.vocab.len())
-         .field("merges_count", &self.merges.len())
-         .finish()
+            .field("vocab_size", &self.vocab.len())
+            .field("merges_count", &self.merges.len())
+            .finish()
     }
 }
 
@@ -45,24 +45,23 @@ impl BPE {
 
     pub fn from_files<P: AsRef<Path>>(vocab_path: P, merges_path: P) -> Result<Self> {
         let vocab = Vocab::load(vocab_path)?;
-        
+
         let file = File::open(merges_path)?;
         let reader = BufReader::new(file);
         let mut merges = HashMap::new();
-        
-        for (i, line_res) in reader.lines().enumerate() {
+        let mut merge_rank = 0u32;
+
+        for line_res in reader.lines() {
             let line = line_res?;
-            if line.starts_with("#") || line.trim().is_empty() {
+            let trimmed = line.trim();
+            if trimmed.starts_with('#') || trimmed.is_empty() {
                 continue;
             }
-            // Skip version line if present
-            if i == 0 && line.starts_with("#version") {
-                continue;
-            }
-            
-            let parts: Vec<&str> = line.split_whitespace().collect();
+
+            let parts: Vec<&str> = trimmed.split_whitespace().collect();
             if parts.len() == 2 {
-                merges.insert((parts[0].to_string(), parts[1].to_string()), i as u32);
+                merges.insert((parts[0].to_string(), parts[1].to_string()), merge_rank);
+                merge_rank += 1;
             }
         }
 
@@ -85,7 +84,7 @@ impl BPE {
         // (This implementation requires RefCell for interior mutability to cache, skipping for simplicity in this immutable method)
 
         let mut word: Vec<String> = token.chars().map(|c| c.to_string()).collect();
-        
+
         loop {
             let pairs = Self::get_pairs(&word);
             if pairs.is_empty() {
@@ -113,7 +112,7 @@ impl BPE {
             let mut i = 0;
 
             while i < word.len() {
-                if i < word.len() - 1 && word[i] == first && word[i+1] == second {
+                if i < word.len() - 1 && word[i] == first && word[i + 1] == second {
                     new_word.push(format!("{}{}", first, second));
                     i += 2;
                 } else {
@@ -136,18 +135,18 @@ impl BPE {
         for mat in self.regex.find_iter(text) {
             let token_text = mat.as_str();
             let bpe_tokens = self.bpe(token_text);
-            
+
             for token in bpe_tokens {
                 if let Some(id) = self.vocab.get_id(&token) {
                     ids.push(id);
                 } else {
                     // Fallback: encode as bytes
                     for byte in token.bytes() {
-                        let s = format!("<0x{:02X}>", byte); 
+                        let s = format!("<0x{:02X}>", byte);
                         if let Some(id) = self.vocab.get_id(&s) {
                             ids.push(id);
                         } else if let Some(id) = self.vocab.get_id("<UNK>") {
-                             ids.push(id);
+                            ids.push(id);
                         }
                     }
                 }
@@ -155,7 +154,7 @@ impl BPE {
         }
         ids
     }
-    
+
     pub fn decode(&self, ids: &[u32]) -> String {
         let mut text = String::new();
         for id in ids {
@@ -165,7 +164,7 @@ impl BPE {
         }
         text
     }
-    
+
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let file = File::create(path)?;
         let writer = std::io::BufWriter::new(file);
@@ -183,5 +182,35 @@ impl BPE {
 
     pub fn vocab(&self) -> &Vocab {
         &self.vocab
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn from_files_assigns_contiguous_merge_ranks_ignoring_comments_and_blanks() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time went backwards")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("tokenizer_bpe_test_{unique}"));
+        fs::create_dir_all(&dir).expect("create temp test dir");
+
+        let vocab_path = dir.join("vocab.json");
+        let merges_path = dir.join("merges.txt");
+
+        fs::write(&vocab_path, r#"{"a":0,"b":1,"ab":2}"#).expect("write vocab");
+        fs::write(&merges_path, "#version: 0.2\n\n# comment\na b\n\n").expect("write merges");
+
+        let bpe = BPE::from_files(&vocab_path, &merges_path).expect("load bpe from files");
+        let rank = bpe.merges.get(&("a".to_string(), "b".to_string())).copied();
+
+        assert_eq!(rank, Some(0));
+
+        fs::remove_dir_all(&dir).expect("cleanup temp test dir");
     }
 }
