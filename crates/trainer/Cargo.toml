@@ -1,0 +1,20 @@
+[package]
+name = "trainer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tch = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+rand = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+claude_core = { path = "../claude-core" }
+tokenizer = { path = "../tokenizer" }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+
+[[bin]]
+name = "claude-train"
+path = "src/main.rs"

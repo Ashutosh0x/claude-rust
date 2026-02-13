@@ -1,0 +1,8 @@
+learning_rate: 0.0003
+batch_size: 32
+context_length: 512
+epochs: 10
+save_every: 1
+checkpoint_dir: "./checkpoints"
+warmup_steps: 100
+weight_decay: 0.1

@@ -1,0 +1,21 @@
+[package]
+name = "claude-tui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# TUI framework
+ratatui = "0.26"
+crossterm = { version = "0.27", features = ["event-stream"] }
+tui-input = "0.8" # For text input widget
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tch = { workspace = true }
+futures = "0.3"
+tokio-stream = "0.1"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+# Local crates (mocking for now if model not ready)
+claude_core = { path = "../claude-core" }
+inference = { path = "../inference" }
+tokenizer = { path = "../tokenizer" }

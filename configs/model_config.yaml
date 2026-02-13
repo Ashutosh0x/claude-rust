@@ -1,0 +1,8 @@
+n_embd: 768
+n_head: 12
+n_layer: 12
+vocab_size: 50257
+max_seq_len: 2048
+dropout: 0.1
+layer_norm_epsilon: 0.00001
+use_bias: false

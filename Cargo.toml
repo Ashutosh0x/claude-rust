@@ -1,0 +1,31 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/claude-core",
+    "crates/tokenizer",
+    "crates/tensors",
+    "crates/trainer",
+    "crates/inference",
+    "crates/retrieval",
+    "crates/quant",
+    "crates/utils",
+    "crates/claude-tui",
+    "tools/tokenizer_cli",
+    "tools/data_prep"
+]
+
+[workspace.dependencies]
+tch = { version = "0.15.0", features = ["download-libtorch"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+rand = "0.8"
+log = "0.4"
+env_logger = "0.10"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+serde_yaml = "0.9"
+safetensors = "0.4"
+memmap2 = "0.9"

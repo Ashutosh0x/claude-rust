@@ -1,0 +1,134 @@
+﻿c:\Users\ashut\.cargo\bin\cargo.exe :     Checking inference v0.1.0 
+(C:\Users\ashut\OneDrive\Documents\claude opus 4.6 terminal with llm intgrated inside from 
+scractch\claude-rust\crates\inference)
+At line:1 char:46
++ ... st-target'; c:\Users\ashut\.cargo\bin\cargo.exe check -p inference 2> ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking in...ates\inference):String) [], RemoteE 
+   xception
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error[E0255]: the name `sampling` is defined multiple times
+ --> crates\inference\src\lib.rs:8:1
+  |
+5 | use crate::sampling::{self, SamplingParams};
+  |                       ---- previous import of the module `sampling` here
+...
+8 | pub mod sampling;
+  | ^^^^^^^^^^^^^^^^^ `sampling` redefined here
+  |
+  = note: `sampling` must be defined only once in the type namespace of this module
+help: you can use `as` to change the binding name of the import
+  |
+5 | use crate::sampling::{self as other_sampling, SamplingParams};
+  |                            +++++++++++++++++
+
+error[E0252]: the name `KVCache` is defined multiple times
+  --> crates\inference\src\lib.rs:13:9
+   |
+ 4 | use crate::kv_cache::KVCache;
+   |     ------------------------ previous import of the type `KVCache` here
+...
+13 | pub use kv_cache::KVCache;
+   |         ^^^^^^^^^^^^^^^^^ `KVCache` reimported here
+   |
+   = note: `KVCache` must be defined only once in the type namespace of this module
+
+error[E0252]: the name `SamplingParams` is defined multiple times
+  --> crates\inference\src\lib.rs:14:29
+   |
+ 5 | use crate::sampling::{self, SamplingParams};
+   |                             -------------- previous import of the type `SamplingParams` here
+...
+14 | pub use sampling::{Sampler, SamplingParams};
+   |                             ^^^^^^^^^^^^^^ `SamplingParams` reimported here
+   |
+   = note: `SamplingParams` must be defined only once in the type namespace of this module
+
+warning: unused import: `std::collections::BinaryHeap`
+ --> crates\inference\src\lib.rs:2:5
+  |
+2 | use std::collections::BinaryHeap;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `Kind` and `Tensor`
+ --> crates\inference\src\lib.rs:3:11
+  |
+3 | use tch::{Tensor, Kind, Device};
+  |           ^^^^^^  ^^^^
+
+warning: unused import: `crate::kv_cache::KVCache`
+ --> crates\inference\src\lib.rs:4:5
+  |
+4 | use crate::kv_cache::KVCache;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `SamplingParams` and `self`
+ --> crates\inference\src\lib.rs:5:23
+  |
+5 | use crate::sampling::{self, SamplingParams};
+  |                       ^^^^  ^^^^^^^^^^^^^^
+
+warning: unused import: `Kind`
+ --> crates\inference\src\kv_cache.rs:1:27
+  |
+1 | use tch::{Tensor, Device, Kind};
+  |                           ^^^^
+
+warning: unused import: `std::collections::VecDeque`
+ --> crates\inference\src\kv_cache.rs:2:5
+  |
+2 | use std::collections::VecDeque;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Kind`
+ --> crates\inference\src\generator.rs:1:27
+  |
+1 | use tch::{Tensor, Device, Kind, IndexOp};
+  |                           ^^^^
+
+warning: unused import: `ModelConfig`
+ --> crates\inference\src\generator.rs:2:38
+  |
+2 | use claude_core::{ClaudeTransformer, ModelConfig};
+  |                                      ^^^^^^^^^^^
+
+warning: unused import: `self`
+ --> crates\inference\src\generator.rs:3:23
+  |
+3 | use crate::sampling::{self, Sampler, SamplingParams};
+  |                       ^^^^
+
+warning: unused import: `kv_cache::KVCache`
+  --> crates\inference\src\lib.rs:13:9
+   |
+13 | pub use kv_cache::KVCache;
+   |         ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `SamplingParams`
+  --> crates\inference\src\lib.rs:14:29
+   |
+14 | pub use sampling::{Sampler, SamplingParams};
+   |                             ^^^^^^^^^^^^^^
+
+warning: unused import: `Rng`
+ --> crates\inference\src\sampling.rs:2:41
+  |
+2 | use rand::{distributions::Distribution, Rng};
+  |                                         ^^^
+
+warning: value assigned to `kv_cache` is never read
+  --> crates\inference\src\generator.rs:25:17
+   |
+25 |         let mut kv_cache: Option<Vec<(Tensor, Tensor)>> = None;
+   |                 ^^^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+   = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+Some errors have detailed explanations: E0252, E0255.
+For more information about an error, try `rustc --explain E0252`.
+warning: `inference` (lib) generated 13 warnings
+error: could not compile `inference` (lib) due to 3 previous errors; 13 warnings emitted
