@@ -8,6 +8,7 @@ A high-performance, terminal-integrated LLM inference and training engine built 
 ![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)
 ![Tokio](https://img.shields.io/badge/Tokio-000000?style=for-the-badge&logo=tokio&logoColor=white)
 ![Axum](https://img.shields.io/badge/Axum-333333?style=for-the-badge)
+<img width="945" height="926" alt="image" src="https://github.com/user-attachments/assets/4b4c561b-5507-4791-b33a-9a98ce4915eb" />
 
 ## Project Architecture
 
@@ -69,3 +70,4 @@ cargo run -p claude-tui
 ## License
 
 This project is licensed under the MIT License.
+
