@@ -15,6 +15,10 @@ Cargo.lock
 /data/vocab.json
 /data/raw/
 /data/processed/
+*_errors.txt
+*.log
+*.tmp
+temp_*.txt
 
 # OS
 .DS_Store
