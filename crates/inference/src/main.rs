@@ -119,7 +119,7 @@ async fn main() -> anyhow::Result<()> {
             n_head: 4,
             n_layer: 4,
             vocab_size: tokenizer.vocab.len() as i64,
-            max_seq_len: 512,
+            max_seq_len: 2048,
             dropout: 0.0,
             use_bias: true,
             layer_norm_epsilon: 1e-5,

@@ -27,10 +27,10 @@ impl Default for ModelConfig {
             n_head: 12,
             n_layer: 12,
             vocab_size: 50257,
-            max_seq_len: 1024,
+            max_seq_len: 2048,
             dropout: 0.0,
             layer_norm_epsilon: 1e-5,
-            use_bias: false, 
+            use_bias: false,
         }
     }
 }
