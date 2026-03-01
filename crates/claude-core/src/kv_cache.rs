@@ -8,9 +8,9 @@ pub struct KVCache {
 }
 
 impl KVCache {
-    pub fn new(max_capacity: usize, n_head: i64, head_dim: i64, device: Device, kind: Kind) -> Self {
-        let k = Tensor::zeros(&[1, n_head, max_capacity as i64, head_dim], (kind, device));
-        let v = Tensor::zeros(&[1, n_head, max_capacity as i64, head_dim], (kind, device));
+    pub fn new(batch_size: i64, max_capacity: usize, n_head: i64, head_dim: i64, device: Device, kind: Kind) -> Self {
+        let k = Tensor::zeros(&[batch_size, n_head, max_capacity as i64, head_dim], (kind, device));
+        let v = Tensor::zeros(&[batch_size, n_head, max_capacity as i64, head_dim], (kind, device));
         Self {
             k,
             v,

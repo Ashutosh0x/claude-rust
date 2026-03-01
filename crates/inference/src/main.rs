@@ -30,13 +30,13 @@ struct GenResponse {
 }
 
 use axum::response::sse::{Event, Sse};
-use futures::stream::{self, Stream};
+use futures::stream::{self, BoxStream, Stream, StreamExt};
 use std::convert::Infallible;
 
 async fn generate_handler(
     State(state): State<AppState>,
     Json(req): Json<GenRequest>,
-) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+) -> Sse<BoxStream<'static, Result<Event, Infallible>>> {
     let mut generator = Generator::new(Arc::clone(&state.model), state.device);
     let mut params = SamplingParams::default();
     if let Some(t) = req.temperature {
@@ -57,7 +57,7 @@ async fn generate_handler(
         .collect();
 
     if input_ids.is_empty() {
-        let stream = stream::iter([Ok(Event::default().data(""))]);
+        let stream = stream::iter([Ok(Event::default().data(""))]).boxed();
         return Sse::new(stream);
     }
 
@@ -84,7 +84,7 @@ async fn generate_handler(
         }
     });
 
-    Sse::new(stream)
+    Sse::new(stream.boxed())
 }
 
 #[tokio::main]

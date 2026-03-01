@@ -19,15 +19,20 @@ The system is organized as a workspace with specialized crates for modularity an
 - **tokenizer**: A custom Byte-Pair Encoding (BPE) implementation with advanced splitting rules and specialized training scripts.
 - **trainer**: An autoregressive training crate with AdamW optimization and cross-entropy loss for fine-tuning.
 - **retrieval**: A vector store implementation for Retrieval-Augmented Generation (RAG) using cosine similarity over tensor embeddings.
+- **agent**: A highly asynchronous orchestrator layer giving local models access to file system reading/writing and terminal execution natively.
 - **claude-tui**: A terminal-based user interface built with Ratatui for real-time interaction with the models.
 
 ## Key Features
 
-- **In-place KV Caching**: Static allocation for key-value pair context to avoid O(N^2) memory reallocation overhead during long generation sessions.
-- **Safetensors Support**: Integration with the Safetensors format for zero-copy, memory-mapped weight loading.
-- **Streaming Inference**: SSE-based streaming server for character-by-character output in the TUI and other clients.
-- **Custom BPE Logic**: Fully internal tokenizer logic, removing dependencies on external Python-based tokenizing tools.
-- **RoPE Implementation**: Modern rotary positional embeddings for better long-context understanding.
+| Feature | Description | Crate Module |
+|---------|-------------|--------------|
+| **In-place KV Caching** | Static allocation for key-value pairs to avoid O(N^2) memory reallocation overhead. | `claude-core` |
+| **Safetensors Support** | Integration with the Safetensors format for lightweight, memory-mapped weight loading. | `claude-core` |
+| **Agentic Tool Calling** | Intercepts `<tool_call>` generation to seamlessly read/write files and list directories. | `agent` |
+| **Terminal Execution** | Native sub-process execution allowing the model to run bash/powershell commands on the system. | `agent` |
+| **Streaming Inference** | Server-Sent Events (SSE) combined with Ratatui for real-time, char-by-char output streaming. | `inference` / `claude-tui` |
+| **Custom BPE Logic** | Fully internal tokenizer implementation without external Python dependencies. | `tokenizer` |
+| **RoPE Implementation** | Modern rotary positional embeddings integrated for enhanced long-context understanding. | `claude-core` |
 
 ## Getting Started
 

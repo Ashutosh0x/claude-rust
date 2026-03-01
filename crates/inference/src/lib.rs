@@ -5,11 +5,13 @@ pub mod kv_cache;
 pub mod sampling;
 pub mod server;
 pub mod generator;
+pub mod batcher;
 
 // Re-export common types
 pub use kv_cache::KVCache;
 pub use sampling::{Sampler, SamplingParams};
 pub use generator::Generator;
+pub use batcher::{Batcher, Request};
 
 /// Helper function to load model from checkpoint
 pub fn load_model(dir: &std::path::Path, device: Device) -> Result<claude_core::ClaudeTransformer> {

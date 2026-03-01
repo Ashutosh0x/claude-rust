@@ -19,3 +19,4 @@ tracing-subscriber = { workspace = true }
 claude_core = { path = "../claude-core" }
 inference = { path = "../inference" }
 tokenizer = { path = "../tokenizer" }
+agent = { path = "../agent" }

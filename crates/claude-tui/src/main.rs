@@ -20,6 +20,10 @@ use tokenizer::{BPE, Vocab};
 use tch::{nn, Device};
 use tui_input::backend::crossterm::EventHandler;
 
+use agent::{Agent, AgentEvent, Tool};
+use agent::tools::fs::{ReadFileTool, WriteFileTool, ListDirTool, SearchCodebaseTool};
+use agent::tools::cmd::RunCommandTool;
+
 mod app;
 mod ui;
 
@@ -29,6 +33,7 @@ use app::{App, Message, Sender};
 enum Action {
     Tick,
     TokenGenerated(String),
+    SystemMessage(String),
     GenerationFinished,
 }
 
@@ -144,6 +149,9 @@ async fn run_app(
                     Action::TokenGenerated(token_text) => {
                         app.append_token(&token_text);
                     }
+                    Action::SystemMessage(msg) => {
+                        app.append_token(&format!("\n\x1b[33m[System: {}]\x1b[0m\n", msg));
+                    }
                     Action::GenerationFinished => {
                         app.is_loading = false;
                     }
@@ -174,27 +182,44 @@ async fn run_app(
                                     let prompt = text.clone();
                                     
                                     tokio::spawn(async move {
-                                        let mut generator = Generator::new(Arc::clone(&model), device);
-                                        let params = SamplingParams::default();
-                                        
-                                        // 1. Tokenize prompt
-                                        let input_ids: Vec<i64> = tokenizer.encode(&prompt).iter().map(|&id| id as i64).collect();
+                                        let mut tools: Vec<Box<dyn Tool>> = Vec::new();
+                                        tools.push(Box::new(ReadFileTool));
+                                        tools.push(Box::new(WriteFileTool));
+                                        tools.push(Box::new(ListDirTool));
+                                        tools.push(Box::new(SearchCodebaseTool));
+                                        tools.push(Box::new(RunCommandTool));
+
+                                        let agent = Agent::new(tools, Arc::clone(&model), Arc::clone(&tokenizer), device);
                                         
                                         // 2. Setup internal stream channel
                                         let (token_tx, mut token_rx) = mpsc::channel(100);
                                         
                                         // 3. Start generation in a blocking-safe way if necessary or just await
-                                        // Since we are already in an async spawn, we can run generate_stream
-                                        let tokenizer_clone = Arc::clone(&tokenizer);
                                         let tx_action_clone = tx_action.clone();
                                         
                                         tokio::spawn(async move {
-                                            let _ = generator.generate_stream(&input_ids, 50, &params, token_tx);
+                                            let _ = agent.run_agentic_loop(&prompt, 1024, token_tx).await;
                                         });
 
-                                        while let Some(token_id) = token_rx.recv().await {
-                                            let text = tokenizer_clone.decode(&[token_id as u32]);
-                                            let _ = tx_action_clone.send(Action::TokenGenerated(text)).await;
+                                        while let Some(event) = token_rx.recv().await {
+                                            match event {
+                                                AgentEvent::Token(text) => {
+                                                    let _ = tx_action_clone.send(Action::TokenGenerated(text)).await;
+                                                }
+                                                AgentEvent::ToolStart(name, args) => {
+                                                    let _ = tx_action_clone.send(Action::SystemMessage(format!("Executing tool {} with args {}", name, args))).await;
+                                                }
+                                                AgentEvent::ToolResult(res) => {
+                                                    let preview = if res.len() > 100 { format!("{}...", &res[0..100]).replace('\n', " ") } else { res.clone().replace('\n', " ") };
+                                                    let _ = tx_action_clone.send(Action::SystemMessage(format!("Tool result returning {} chars (preview: {})", res.len(), preview))).await;
+                                                }
+                                                AgentEvent::ToolError(err) => {
+                                                    let _ = tx_action_clone.send(Action::SystemMessage(format!("Tool error: {}", err))).await;
+                                                }
+                                                AgentEvent::Finished => {
+                                                    break;
+                                                }
+                                            }
                                         }
                                         
                                         let _ = tx_action.send(Action::GenerationFinished).await;
