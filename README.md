@@ -14,13 +14,16 @@ A high-performance, terminal-integrated LLM inference and training engine built 
 
 The system is organized as a workspace with specialized crates for modularity and performance:
 
-- **claude-core**: The backbone of the system — Transformer blocks, NTK-Aware RoPE (Rotary Positional Embeddings), RMSNorm, Sliding Window Attention, and Evicting KV Cache with Sink Token pinning.
-- **inference**: A high-speed inference engine supporting SSE (Server-Sent Events) streaming via a web server and a flexible token generation pipeline with unbounded context support.
-- **tokenizer**: A custom Byte-Pair Encoding (BPE) implementation with advanced splitting rules and specialized training scripts.
-- **trainer**: An autoregressive training crate with AdamW optimization and cross-entropy loss for fine-tuning.
-- **retrieval**: A vector store implementation for Retrieval-Augmented Generation (RAG) using cosine similarity over tensor embeddings.
+- **claude-core**: The backbone of the system — Transformer blocks, NTK-Aware RoPE (Rotary Positional Embeddings), RMSNorm, Sliding Window Attention, Evicting KV Cache with Sink Token pinning, embedding layers, weight initialization, and sinusoidal/rotary position encodings.
+- **inference**: A high-speed inference engine supporting SSE (Server-Sent Events) streaming via a web server, flexible token generation pipeline with unbounded context support, and configurable server/CLI modes.
+- **tokenizer**: A custom Byte-Pair Encoding (BPE) implementation with advanced splitting rules, byte-level fallback encoding, and specialized training scripts.
+- **trainer**: Full training pipeline with AdamW optimization, cosine LR scheduling with warmup, checkpoint save/resume, JSONL metrics logging, and streaming binary data loader.
+- **retrieval**: RAG pipeline with text chunking, mean-pool embeddings, flat cosine similarity index, and FAISS-compatible configuration.
+- **quant**: INT8 and 4-bit model quantization with per-group scaling (~4–8x compression) for consumer GPU inference.
+- **tensors**: Backend abstraction layer with tensor operation utilities, broadcast checks, and CUDA/VRAM estimation.
 - **agent**: A highly asynchronous orchestrator layer giving local models access to file system reading/writing and terminal execution natively.
 - **claude-tui**: A terminal-based user interface built with Ratatui for real-time interaction with the models.
+- **utils**: Shared config (YAML/JSON) loading, filesystem helpers, and logging setup.
 
 ## Key Features
 
@@ -35,6 +38,9 @@ The system is organized as a workspace with specialized crates for modularity an
 | **Terminal Execution** | Native sub-process execution allowing the model to run bash/powershell commands on the system. | `agent` |
 | **Streaming Inference** | SSE combined with Ratatui for real-time, char-by-char output streaming. | `inference` / `claude-tui` |
 | **Custom BPE Logic** | Fully internal tokenizer implementation without external Python dependencies. | `tokenizer` |
+| **INT8/Q4 Quantization** | Symmetric INT8 and per-group 4-bit quantization for ~4–8x model compression. | `quant` |
+| **Training Pipeline** | AdamW + cosine LR scheduler + checkpoint save/resume + JSONL metrics logging. | `trainer` |
+| **RAG Pipeline** | Text chunking, embeddings, flat cosine similarity search for retrieval-augmented generation. | `retrieval` |
 
 ## Long-Context Architecture
 
@@ -133,7 +139,9 @@ cargo run -p claude-tui
 ## Production Roadmap
 
 - [x] **Long-Context Architecture**: NTK RoPE, Sliding Window Attention, Evicting KV Cache, Sink Tokens
-- [ ] **Quantization**: Implementation of INT8/4-bit linear quantization for model weights.
+- [x] **Quantization**: INT8 and 4-bit per-group quantization with calibration stats.
+- [x] **Training Pipeline**: Checkpoint save/resume, cosine LR scheduler, JSONL metrics, streaming data loader.
+- [x] **RAG Pipeline**: Text chunking, embedding, flat cosine similarity index.
 - [ ] **GQA (Grouped-Query Attention)**: Adding support for GQA to further reduce memory bandwidth usage.
 - [ ] **Continuous Batching**: Refactoring the generator for high-throughput multi-request processing.
 - [ ] **Markdown Rendering**: Integration of rich text formatting within the terminal interface.
