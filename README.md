@@ -40,29 +40,27 @@ The system is organized as a workspace with specialized crates for modularity an
 
 The system achieves 1M token context through a 4-component hybrid architecture:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Input Tokens                                 │
-│                        │                                        │
-│                   ┌────▼────┐                                   │
-│                   │Embedding│                                   │
-│                   └────┬────┘                                   │
-│                        │                                        │
-│         ┌──────────────▼──────────────┐                         │
-│         │     Transformer Block × N    │                        │
-│         │  ┌────────────────────────┐  │                        │
-│         │  │  RMSNorm → Attention   │  │◄── NTK-Aware RoPE     │
-│         │  │  (Sliding Window +     │  │◄── Sliding Window Mask │
-│         │  │   Sink Tokens)         │  │◄── Evicting KV Cache  │
-│         │  ├────────────────────────┤  │                        │
-│         │  │  RMSNorm → MLP (GeLU)  │  │                        │
-│         │  └────────────────────────┘  │                        │
-│         └──────────────┬──────────────┘                         │
-│                        │                                        │
-│                 ┌──────▼──────┐                                  │
-│                 │  LM Head    │                                  │
-│                 └─────────────┘                                  │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Input["Input Tokens"] --> Emb["Embedding"]
+    Emb --> Block
+
+    subgraph Block["Transformer Block × N"]
+        direction TB
+        LN1["RMSNorm"] --> Attn["Sliding Window Attention\n+ Sink Tokens"]
+        Attn --> Res1["+ Residual"]
+        Res1 --> LN2["RMSNorm"]
+        LN2 --> MLP["MLP (GeLU)"]
+        MLP --> Res2["+ Residual"]
+    end
+
+    ROPE["NTK-Aware RoPE\n(position scaling)"] -.-> Attn
+    MASK["Sliding Window Mask\n(local + sink)"] -.-> Attn
+    KVC["Evicting KV Cache\n(ring buffer + sink pinning)"] -.-> Attn
+
+    Block --> LNF["Final RMSNorm"]
+    LNF --> LMHead["LM Head"]
+    LMHead --> Output["Logits"]
 ```
 
 | Component | Problem Solved | Without It |
