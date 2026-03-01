@@ -12,8 +12,6 @@ pub struct RotaryEmbedding {
     cos_cache: Tensor,
     /// Precomputed sin values: [max_seq_len, head_dim]
     sin_cache: Tensor,
-    /// Head dimension (used for validation)
-    head_dim: i64,
 }
 
 impl RotaryEmbedding {
@@ -48,7 +46,6 @@ impl RotaryEmbedding {
         Self {
             cos_cache,
             sin_cache,
-            head_dim,
         }
     }
 

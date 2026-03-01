@@ -30,7 +30,7 @@ struct GenResponse {
 }
 
 use axum::response::sse::{Event, Sse};
-use futures::stream::{self, BoxStream, Stream, StreamExt};
+use futures::stream::{self, BoxStream, StreamExt};
 use std::convert::Infallible;
 
 async fn generate_handler(
