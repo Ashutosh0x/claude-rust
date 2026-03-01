@@ -2,11 +2,14 @@
 
 This document tracks the technical debt, feature requests, and architectural milestones for the Claude-Rust project.
 
-## Status: Development (Long-Context Ready)
-- **Crates**: All crates (`claude-core`, `inference`, `tokenizer`, `trainer`, `retrieval`, `claude-tui`) are compiling.
+## Status: Development (Feature-Complete Core)
+- **Crates**: All 11 crates (`claude-core`, `inference`, `tokenizer`, `trainer`, `retrieval`, `quant`, `tensors`, `agent`, `claude-tui`, `utils`, tools) are compiling with zero warnings.
 - **Inference**: SSE Streaming server is functional with long-context support (up to 1M tokens).
 - **Long-Context**: NTK-Aware RoPE, Sliding Window Attention, Evicting KV Cache, and Sink Tokens are implemented.
-- **Tokenizer**: Custom BPE trainer and decoder are functional.
+- **Training**: Full pipeline with checkpoint save/resume, cosine LR scheduler, JSONL metrics.
+- **Quantization**: INT8 and Q4 per-group quantization for model compression.
+- **RAG**: Text chunking, embedding, flat cosine similarity index.
+- **Tokenizer**: Custom BPE trainer and decoder with byte-level fallback.
 
 ---
 
@@ -18,6 +21,29 @@ This document tracks the technical debt, feature requests, and architectural mil
 - [x] **Evicting KV Cache**: Pre-allocated ring buffer with sink pinning — bounded memory, graceful middle-token eviction.
 - [x] **Attention Sink Tokens**: First N tokens pinned as global context anchors for stable attention quality.
 - [x] **Static KV Cache Allocation**: Replaced `Tensor::cat` O(N²) copies with pre-allocated in-place writes.
+
+### ✅ Quantization (`quant`)
+- [x] **INT8 Weight Quantization**: Symmetric per-tensor quantization with roundtrip accuracy (4x compression).
+- [x] **Q4 Weight Quantization**: Per-group 4-bit packing with two nibbles per byte (~8x compression).
+- [x] **Calibration Stats**: Symmetric and asymmetric calibration utilities.
+
+### ✅ Training Pipeline (`trainer`)
+- [x] **Checkpoint Manager**: Save/load/resume with step metadata and model config.
+- [x] **Cosine LR Scheduler**: Linear warmup + cosine decay.
+- [x] **Metrics Logger**: JSONL output with loss, perplexity, LR, throughput.
+- [x] **Streaming DataLoader**: Binary token file reader with sequential batching.
+- [x] **Full Training Loop**: Wires optimizer, scheduler, metrics, and checkpointing.
+
+### ✅ RAG Pipeline (`retrieval`)
+- [x] **Text Chunker**: Sentence-boundary splitting with configurable overlap.
+- [x] **Embedder Trait**: `MeanPoolEmbedder` using token embedding table.
+- [x] **Flat Index**: Brute-force cosine similarity search.
+- [x] **FAISS Config**: IVF/PQ factory string generation stub.
+
+### ✅ Infrastructure
+- [x] **Tensors Abstraction**: Backend trait, tensor ops, CUDA utilities.
+- [x] **Utils**: Config load/save, filesystem helpers, logging init.
+- [x] **Core Modules**: Embedding layer, LM head, weight init, sinusoidal encoding.
 
 ---
 
@@ -41,15 +67,11 @@ This document tracks the technical debt, feature requests, and architectural mil
 - [ ] **Store Persistence**:
   - **Task**: Implement `.save()` and `.load()` for the `VectorStore` using `serde` and `safetensors`.
 - [ ] **RAG Integration Hook**:
-  - **Task**: Add a "Context Provider" trait to the generation loop that injecting retrieved snippets into the prompt dynamically.
-- [ ] **Embedding Pipeline**:
-  - **Task**: Integration of a small BERT or similar model for generating the embeddings used in `retrieval`.
+  - **Task**: Add a "Context Provider" trait to the generation loop that injects retrieved snippets into the prompt dynamically.
+- [ ] **Production Embedder**:
+  - **Task**: Integration of a small BERT or similar model for high-quality embeddings (replacing the byte-hash MeanPoolEmbedder).
 
-### 4. Efficiency & Quantization (`quant`)
-- [ ] **INT8 Weight Quantization**:
-  - **Task**: Implement symmetric/asymmetric linear quantization for model weights.
-
-### 5. UI/UX Polish (`claude-tui`)
+### 4. UI/UX Polish (`claude-tui`)
 - [ ] **Markdown Rendering**:
   - **Task**: Use a crate like `pulldown-cmark` or `ratatui-markdown` to render formatted text in the chat window.
 - [ ] **Horizontal Scrolling & Code Blocks**:
