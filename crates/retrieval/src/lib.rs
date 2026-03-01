@@ -2,6 +2,15 @@ use tch::{Tensor, Device, Kind};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+pub mod chunker;
+pub mod embedder;
+pub mod index;
+pub mod faiss_compat;
+
+pub use chunker::{chunk_text, ChunkerConfig, TextChunk};
+pub use embedder::{Embedder, MeanPoolEmbedder};
+pub use index::FlatIndex;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Document {
     pub id: String,
@@ -38,7 +47,6 @@ impl VectorStore {
     }
 
     /// Search for most similar documents using cosine similarity
-    /// query_embedding: [dim] or [1, dim] tensor
     pub fn search(&self, query_embedding: &Tensor, top_k: usize) -> Vec<(&Document, f64)> {
         let embeddings = match &self.embeddings {
             Some(e) => e,
@@ -47,7 +55,6 @@ impl VectorStore {
 
         let q = query_embedding.to_device(self.device).view([1, -1]);
         
-        // Normalize for cosine similarity
         let q_norm = q.pow_tensor_scalar(2.0).sum_dim_intlist(Some(&[-1][..]), false, Kind::Double).sqrt();
         let e_norm = embeddings.pow_tensor_scalar(2.0).sum_dim_intlist(Some(&[-1][..]), true, Kind::Double).sqrt();
         
@@ -69,5 +76,9 @@ impl VectorStore {
 
     pub fn len(&self) -> usize {
         self.documents.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.documents.is_empty()
     }
 }

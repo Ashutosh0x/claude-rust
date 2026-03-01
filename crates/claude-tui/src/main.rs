@@ -15,7 +15,6 @@ use std::sync::Arc;
 
 // Local crate imports
 use claude_core::{ClaudeTransformer, ModelConfig};
-use inference::{Generator, SamplingParams};
 use tokenizer::{BPE, Vocab};
 use tch::{nn, Device};
 use tui_input::backend::crossterm::EventHandler;

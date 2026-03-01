@@ -1,7 +1,17 @@
 pub mod dataset;
 pub mod train;
+pub mod checkpoint;
+pub mod data_loader;
+pub mod metrics;
+pub mod optim;
+pub mod schedule;
+pub mod train_loop;
 
 pub use train::Trainer;
+pub use checkpoint::CheckpointManager;
+pub use data_loader::DataLoader;
+pub use metrics::{MetricsLogger, StepMetrics};
+pub use schedule::CosineScheduler;
 
 use serde::{Deserialize, Serialize};
 
