@@ -1,0 +1,42 @@
+# Reference Configuration for 1M Token Context
+#
+# This demonstrates the settings needed to push context to ~1M tokens
+# using the hybrid long-context architecture:
+#   - NTK-Aware RoPE Scaling (250x stretch)
+#   - Sliding Window Attention (4096 local window)
+#   - Evicting KV Cache (32K active tokens)
+#   - Attention Sink Tokens (4 global anchors)
+#
+# Hardware requirement: ~40-48 GB VRAM for a 7B parameter model.
+# A single A100 80GB can handle this configuration.
+
+[model]
+n_embd = 4096
+n_head = 32
+n_layer = 32
+vocab_size = 50257
+max_seq_len = 1_000_000    # 1M tokens target
+original_max_seq_len = 4096 # model's training context length
+dropout = 0.0
+layer_norm_epsilon = 1e-5
+use_bias = false
+
+[rope]
+rope_base = 10000.0
+# NTK scaling factor = 1M / 4K = 250x (computed automatically)
+
+[attention]
+window_size = 4096          # local sliding window per layer
+sink_tokens = 4             # global context anchors, always attended
+
+[kv_cache]
+kv_cache_capacity = 32768   # max tokens kept in active cache
+# sink_tokens must match attention.sink_tokens
+
+# --- Performance Estimates ---
+#
+# Context Length | GPU VRAM (7B) | Speed
+# 32K           | ~24 GB        | Fast
+# 128K          | ~28 GB        | Moderate
+# 512K          | ~32 GB        | Slow
+# 1M            | ~40-48 GB     | Very slow, feasible

@@ -12,3 +12,6 @@ thiserror = { workspace = true }
 indoc = "2.0" 
 safetensors = { workspace = true }
 memmap2 = { workspace = true }
+
+[dev-dependencies]
+serde_yaml = { workspace = true }

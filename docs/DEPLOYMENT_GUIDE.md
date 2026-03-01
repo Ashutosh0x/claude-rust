@@ -108,6 +108,11 @@ spec:
 
 *   **Batch Size**: Increase `batch_size` in `server_config.yaml` to improve throughput at the cost of latency.
 *   **Threads**: Set `OMP_NUM_THREADS` (OpenMP) to match physical CPU cores if using CPU inference.
+*   **Long-Context Configuration**:
+    *   `kv_cache_capacity`: Controls max tokens held in the evicting KV cache. Larger = more VRAM, better recall.
+    *   `window_size`: Sliding window size for local attention. Increase for better local coherence.
+    *   `sink_tokens`: Number of global context anchors (typically 4). Increase only if the model's system prompt is critical.
+    *   VRAM estimates for 7B model: 32K context ≈ 24 GB, 128K ≈ 28 GB, 512K ≈ 32 GB, 1M ≈ 40–48 GB.
 *   **Quantization**:
     *   Use `crates/quant` tools to convert `fp32` weights to `int8` or `q4`.
     *   This reduces VRAM usage (e.g., 7B model fits on <6GB VRAM instead of 14GB).

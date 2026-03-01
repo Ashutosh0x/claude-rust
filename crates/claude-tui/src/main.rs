@@ -76,6 +76,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             dropout: 0.1,
             use_bias: true,
             layer_norm_epsilon: 1e-5,
+            ..Default::default()
         };
         let vs = nn::VarStore::new(device);
         Arc::new(ClaudeTransformer::new(&vs.root(), &config))

@@ -3,6 +3,11 @@ n_head: 12
 n_layer: 12
 vocab_size: 50257
 max_seq_len: 2048
+original_max_seq_len: 2048
 dropout: 0.1
 layer_norm_epsilon: 0.00001
 use_bias: false
+rope_base: 10000.0
+window_size: 2048
+sink_tokens: 4
+kv_cache_capacity: 2048

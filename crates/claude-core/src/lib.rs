@@ -8,4 +8,7 @@ pub mod safetensors_util;
 
 pub use transformer::ClaudeTransformer;
 pub use config::ModelConfig;
-pub use kv_cache::KVCache;
+pub use kv_cache::EvictingKVCache;
+
+#[cfg(test)]
+mod tests;

@@ -123,6 +123,7 @@ async fn main() -> anyhow::Result<()> {
             dropout: 0.0,
             use_bias: true,
             layer_norm_epsilon: 1e-5,
+            ..Default::default()
         };
         let vs = tch::nn::VarStore::new(device);
         Arc::new(ClaudeTransformer::new(&vs.root(), &config))

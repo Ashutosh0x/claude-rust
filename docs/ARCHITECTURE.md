@@ -50,15 +50,17 @@ graph TD
 
 ### 2. Core Model (`crates/claude-core`)
 
-*   **Role**: Defines the Transformer architecture.
-*   **Implementation**: Hardware-accelerated tensor operations via `tch-rs` (LibTorch bindings) or `burn`.
+*   **Role**: Defines the Transformer architecture with long-context support (up to 1M tokens).
+*   **Implementation**: Hardware-accelerated tensor operations via `tch-rs` (LibTorch bindings).
 *   **Architecture**:
     *   **Decoder-Only Transformer**: Standard GPT-style architecture.
-    *   **Positional Embeddings**: Rotary (RoPE) or Sinusoidal.
-    *   **Attention**: Multi-Head Causal Self-Attention (optionally with FlashAttention via backend).
-    *   **Normalization**: Pre-LayerNorm topology for training stability.
-    *   **Activation**: GeLU or SwiGLU.
-*   **Key Traits**: modular `Block` struct, configurable `ModelConfig`.
+    *   **NTK-Aware RoPE**: Rotary positional embeddings with Neural Tangent Kernel scaling — stretches low-frequency positional features to handle context lengths far beyond training (e.g., 4K → 1M).
+    *   **Sliding Window Attention**: O(N × W) attention — each token attends to a local window plus global sink tokens, replacing O(N²) full attention.
+    *   **Evicting KV Cache**: Pre-allocated ring buffer with sink token pinning. When full, evicts middle tokens while preserving global anchors (sink tokens) and the most recent window.
+    *   **Attention Sink Tokens**: First N tokens pinned as global context anchors to stabilize attention quality over extremely long contexts.
+    *   **Normalization**: RMSNorm (Pre-norm topology for training stability).
+    *   **Activation**: GeLU.
+*   **Key Traits**: Modular `Block` struct, configurable `ModelConfig` with backward-compatible long-context fields.
 
 ### 3. Tensors (`crates/tensors`)
 
@@ -79,11 +81,12 @@ graph TD
 
 ### 5. Inference (`crates/inference`)
 
-*   **Role**: Serves the trained model for text generation.
+*   **Role**: Serves the trained model for text generation with long-context support.
 *   **Components**:
-    *   **Server**: Async `axum` web server.
-    *   **Generator**: Autoregressive decoding loop.
-        *   **KV Cache**: Caches Key/Value tensors from previous tokens to avoid re-computation (O(1) per token generation).
+    *   **Server**: Async `axum` web server with SSE streaming.
+    *   **Generator**: Autoregressive decoding loop with unbounded generation.
+        *   **Evicting KV Cache**: Uses `claude-core`'s `EvictingKVCache` with ring buffer + sink pinning. No hard sequence length cutoff — the cache gracefully evicts middle tokens as generation extends.
+        *   **Position Tracking**: Tracks `total_tokens_seen` for correct NTK-scaled RoPE positioning even after cache eviction.
     *   **Sampler**:
         *   **Temperature**: Controls randomness.
         *   **Top-K**: Limits sampling to top K probabilities.
